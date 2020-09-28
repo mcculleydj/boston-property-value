@@ -1,3 +1,5 @@
+Graduate academic work focused on analyzing 30 years of property assessment data using machine learning and network theory.
+
 Assumptions:
 
 - By filtering on pCodes as of 2016 I am discounting parcels that were residential in the past. I have no idea what the impact of this decision might be, but I believe there were far more industrial or commercial properties that became residential than the other way around.
