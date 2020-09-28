@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Performance</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/normalize.css">
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <div id="wrapper">
+      <div id="title">
+        <h1>Percent Change in Value Over Five Years</h1>
+      </div>
+      <div id="map"></div>
+      <div id="menu">
+        <button class="buttonClicked" id="1990" onClick="pickYear('1990')">1990</button>
+        <button class="buttonDefault" id="1991" onClick="pickYear('1991')">1991</button>
+        <button class="buttonDefault" id="1992" onClick="pickYear('1992')">1992</button>
+        <button class="buttonDefault" id="1993" onClick="pickYear('1993')">1993</button>
+        <button class="buttonDefault" id="1994" onClick="pickYear('1994')">1994</button>
+        <button class="buttonDefault" id="1995" onClick="pickYear('1995')">1995</button>
+        <button class="buttonDefault" id="1996" onClick="pickYear('1996')">1996</button>
+        <button class="buttonDefault" id="1997" onClick="pickYear('1997')">1997</button>
+        <button class="buttonDefault" id="1998" onClick="pickYear('1998')">1998</button>
+        <button class="buttonDefault" id="1999" onClick="pickYear('1999')">1999</button>
+        <button class="buttonDefault" id="2000" onClick="pickYear('2000')">2000</button>
+        <button class="buttonDefault" id="2001" onClick="pickYear('2001')">2001</button>
+        <button class="buttonDefault" id="2002" onClick="pickYear('2002')">2002</button>
+        <button class="buttonDefault" id="2003" onClick="pickYear('2003')">2003</button>
+        <button class="buttonDefault" id="2004" onClick="pickYear('2004')">2004</button>
+        <button class="buttonDefault" id="2005" onClick="pickYear('2005')">2005</button>
+        <button class="buttonDefault" id="2006" onClick="pickYear('2006')">2006</button>
+        <button class="buttonDefault" id="2007" onClick="pickYear('2007')">2007</button>
+        <button class="buttonDefault" id="2008" onClick="pickYear('2008')">2008</button>
+        <button class="buttonDefault" id="2009" onClick="pickYear('2009')">2009</button>
+        <button class="buttonDefault" id="2010" onClick="pickYear('2010')">2010</button>
+        <button class="buttonDefault" id="2011" onClick="pickYear('2011')">2011</button>
+        <button class="buttonDefault" id="2012" onClick="pickYear('2012')">2012</button>
+        <button class="buttonDefault" id="2013" onClick="pickYear('2013')">2013</button>
+        <button class="buttonDefault" id="2014" onClick="pickYear('2014')">2014</button>
+        <button class="buttonDefault" id="2015" onClick="pickYear('2015')">2015</button>
+        <button class="buttonDefault" id="2016" onClick="pickYear('2016')">2016</button>
+      </div>
+    </div>
+
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+    <script>
+
+      var year = '1990';
+      var map;
+      var legendRectSize = 18;
+      var legendSpacing = 4;
+      var width = 200;
+      var height = 400;
+
+
+      function pickYear(yr) {
+        year = yr;
+        initMap();
+        document.getElementsByClassName("buttonClicked")[0].className = "buttonDefault";
+        document.getElementById(yr).className = "buttonClicked";
+      }
+
+      function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 12,
+          center: {lat: 42.314, lng: -71.088}
+        });
+
+        var url = "https://raw.githubusercontent.com/mcculleydj/networks_and_markets/master/" + year + "_cell_data_iter.json";
+
+        d3.json(url, function(error, data) { 
+          if (error) throw error;
+          
+          var meta = data[data.length-1];
+
+          var reds = d3.scaleThreshold()
+            .domain([0.3, 0.8, 1.3, 1.8])
+            .range(d3.schemeReds[5]);
+
+          var blues = d3.scaleThreshold()
+            .domain([0.1, 0.3, 0.5, 0.7])
+            .range(d3.schemeBlues[5]);
+
+          data.forEach(function(d) {
+            
+            var coords = [
+              {lat: d["lat1"], lng: d["lng1"]},
+              {lat: d["lat2"], lng: d["lng2"]},
+              {lat: d["lat3"], lng: d["lng3"]},
+              {lat: d["lat4"], lng: d["lng4"]},
+              {lat: d["lat5"], lng: d["lng5"]},
+              {lat: d["lat6"], lng: d["lng6"]}
+            ];
+
+            // live cells
+            if (d['live']) {
+              if (d['pct_incr'] !== undefined) {
+                if (d['pct_incr'] < 0) {
+                  var cell = new google.maps.Polygon({
+                  paths: coords,
+                  strokeColor: '#000000',
+                  strokeOpacity: 0.3,
+                  strokeWeight: 2,
+                  fillColor: blues(Math.abs(d['pct_incr'])),
+                  fillOpacity: 0.6
+                  });
+                } else {
+                  var cell = new google.maps.Polygon({
+                  paths: coords,
+                  strokeColor: '#000000',
+                  strokeOpacity: 0.3,
+                  strokeWeight: 2,
+                  fillColor: reds(d['pct_incr']),
+                  fillOpacity: 0.6
+                  });
+                }
+
+                cell.pct_incr = String(d['pct_incr'].toFixed(3));
+              
+              } else { // newly live cell
+                var cell = new google.maps.Polygon({
+                paths: coords,
+                strokeColor: '#000000',
+                strokeOpacity: 0.3,
+                strokeWeight: 2,
+                fillColor: '#DAA520',
+                fillOpacity: 0.6
+                });
+
+                cell.pct_incr = "New live cell";
+
+              }
+
+              cell.ID = String(d['cell_id']);
+              cell.totalArea = String(d['total_area']);
+              cell.count = String(d['count']);
+              cell.avgVpsf = String(d['avg_vpsf'].toFixed(3));
+              cell.setMap(map);
+
+            }
+          });
+        });
+      }
+
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=<ENTER API KEY HERE>&callback=initMap">
+    </script>
+  </body>
+</html>

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Classification</title>
+    <link rel="stylesheet" href="css/style_results.css">
+    <link rel="stylesheet" href="css/normalize.css">
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <div id="wrapper">
+      <div id="title">
+        <h1>Top Performing Cells from 2001 - 2016</h1>
+      </div>
+      <div id="map"></div>
+      <div id="cell">
+        <h2>Cell Data</h2>
+      </div>
+
+      <div id="meta">
+        <h2>Metadata</h2>
+      </div>
+
+    </div>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+
+    <script>
+
+      var year = '2001';
+      var map;
+      var showBridge = false;
+      var legendRectSize = 18;
+      var legendSpacing = 4;
+      var width = 200;
+      var height = 400;
+
+      function pickYear(yr) {
+        year = yr;
+        document.getElementsByClassName("buttonClicked")[0].className = "buttonDefault";
+        document.getElementById(yr).className = "buttonClicked";
+        d3.select("svg").remove();
+        d3.select("svg").remove();
+        d3.select("svg").remove();
+        d3.select("svg").remove();
+        initMap();
+      }
+
+      function toggleBridge() {
+        var cn = document.getElementById("toggle").className;
+        if (cn == "bridgeButtonDefault") {
+          document.getElementById("toggle").className = "bridgeButtonClicked";
+          showBridge = true;
+        } else {
+          document.getElementById("toggle").className = "bridgeButtonDefault";
+          showBridge = false;
+        }
+        d3.select("svg").remove();
+        d3.select("svg").remove();
+        d3.select("svg").remove();
+        d3.select("svg").remove();
+        initMap();
+      }
+
+     function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 12,
+          center: {lat: 42.314, lng: -71.088}
+        });
+
+        var url = "https://raw.githubusercontent.com/mcculleydj/networks_and_markets/master/" + year + "_cell_data_iter.json";
+
+        d3.json(url, function(error, data) { 
+          if (error) throw error;
+          
+          var meta = data[data.length-1];   // get metadata
+
+          var color = d3.scaleThreshold()   // build color map
+            .domain(meta['domain'])
+            .range(d3.schemeReds[9]);
+
+         // init cell header
+
+          var svg_cell = d3.select('#cell')
+          .append('svg')
+          .attr('width', width * 1.4)
+          .attr('height', height)
+          .append('g')
+          .attr('transform', 'translate(' + -19 + ',' + 87 + ')');
+
+          var cell_headers = [];
+
+          cell_headers.push("Click any cell");
+          cell_headers.push("to disply data");
+
+          var cell_headers = svg_cell.selectAll('.cellheader')  
+            .data(cell_headers)           
+            .enter()                           
+            .append('g')                    
+            .attr('class', 'cellheader')             
+            .attr('transform', function(d, i) {                
+              var height = legendRectSize + legendSpacing;     
+              var offset =  height * 4;   
+              var horz = -2 * legendRectSize;                 
+              var vert = i * height - offset;                   
+              return 'translate(' + 0 + ',' + vert + ')';   
+            });
+
+          cell_headers.append('text')        
+          .attr('x', legendRectSize + legendSpacing) 
+          .attr('y', legendRectSize - legendSpacing) 
+          .text(function(d) { return d; });
+
+          var svg_leg = d3.select('#legend')
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height)
+            .append('g')
+            .attr('transform', 'translate(' + 39 +
+              ',' + 87 + ')');
+
+          var legend = svg_leg.selectAll('.legend')  
+            .data(color.domain())            
+            .enter()                           
+            .append('g')                    
+            .attr('class', 'legend')                      
+            .attr('transform', function(d, i) {                
+              var height = legendRectSize + legendSpacing;     
+              var offset =  height * color.domain().length / 2;   
+              var horz = -2 * legendRectSize;                 
+              var vert = i * height - offset;                   
+              return 'translate(' + horz + ',' + vert + ')';   
+            });
+
+          legend.append('rect')     
+          .attr('width', legendRectSize)     
+          .attr('height', legendRectSize)    
+          .style('fill', color)       
+          .style('stroke', color);  
+
+          legend.append('text')        
+            .attr('x', legendRectSize + legendSpacing) 
+            .attr('y', legendRectSize - legendSpacing) 
+            .text(function(d) { return "> $" + String(d) + " / ft²"; });
+
+          var svg_meta = d3.select('#meta')
+            .append('svg')
+            .attr('width', width * 1.4)
+            .attr('height', height)
+            .append('g')
+            .attr('transform', 'translate(' + -19 +
+              ',' + 87 + ')');
+
+          var metadata_headers = [];
+          var metadata_vals = [];
+          var totalVpsf = String(meta["totalVpsf"].toFixed(0))
+          totalVpsf = '$' + totalVpsf.substr(0, totalVpsf.length - 3) + ',' + totalVpsf.substr(totalVpsf.length - 3) + " / ft²";
+          var n_cells = String(meta["num_cells"])
+          n_cells = n_cells.substr(0, n_cells.length - 3) + ',' + n_cells.substr(n_cells.length - 3);
+          var n_parcels = String(meta["num_parcels"])
+          n_parcels = n_parcels.substr(0, n_parcels.length - 3) + ',' + n_parcels.substr(n_parcels.length - 3);
+
+          metadata_headers.push("Max cell value:");
+          metadata_headers.push("Min cell value:");
+          metadata_headers.push("Avg cell value:");
+          metadata_headers.push("Total value:");
+          metadata_headers.push("# of cells:");
+          metadata_headers.push("# of parcels:");
+
+          metadata_vals.push('$' + String(meta["max_vpsf"].toFixed(2)) + " / ft²");
+          metadata_vals.push('$' + String(meta["min_vpsf"].toFixed(2)) + " / ft²");
+          metadata_vals.push('$' + String(meta["avg_avg_vpsf"].toFixed(2)) + " / ft²");
+          metadata_vals.push(totalVpsf);
+          metadata_vals.push(n_cells);
+          metadata_vals.push(n_parcels);
+
+          var meta_vals = svg_meta.selectAll('.metavals')  
+            .data(metadata_vals)           
+            .enter()                           
+            .append('g')                    
+            .attr('class', 'metavals')             
+            .attr('transform', function(d, i) {                
+              var height = legendRectSize + legendSpacing;     
+              var offset =  height * color.domain().length / 2;   
+              var horz = -2 * legendRectSize;                 
+              var vert = i * height - offset;                   
+              return 'translate(' + 98 + ',' + vert + ')';   
+            });
+
+          meta_vals.append('text')        
+            .attr('x', legendRectSize + legendSpacing) 
+            .attr('y', legendRectSize - legendSpacing) 
+            .text(function(d) { return d; });
+
+          var meta_headers = svg_meta.selectAll('.metaheader')  
+            .data(metadata_headers)           
+            .enter()                           
+            .append('g')                    
+            .attr('class', 'metaheader')             
+            .attr('transform', function(d, i) {                
+              var height = legendRectSize + legendSpacing;     
+              var offset =  height * color.domain().length / 2;   
+              var horz = -2 * legendRectSize;                 
+              var vert = i * height - offset;                   
+              return 'translate(' + 0 + ',' + vert + ')';   
+            });
+
+          meta_headers.append('text')        
+            .attr('x', legendRectSize + legendSpacing) 
+            .attr('y', legendRectSize - legendSpacing) 
+            .text(function(d) { return d; });
+
+          // performance
+
+          var svg_perf = d3.select('#perf')
+            .append('svg')
+            .attr('width', width * 1.4)
+            .attr('height', height)
+            .append('g')
+            .attr('transform', 'translate(' + -19 +
+              ',' + 87 + ')');
+
+          var perf_headers = [];
+          var perf_vals = [];
+
+          var avg_5yr = meta["avg_5yr_pct_incr"];
+          if (avg_5yr != "N/A") {
+            avg_5yr = String((avg_5yr.toFixed(2) * 100).toFixed(0)) + '%';
+          }
+          var avg_10yr = meta["avg_10yr_pct_incr"];
+          if (avg_10yr != "N/A") {
+            avg_10yr = String((avg_10yr.toFixed(2) * 100).toFixed(0)) + '%';
+          }
+          var avg_15yr = meta["avg_15yr_pct_incr"];
+          if (avg_15yr != "N/A") {
+            avg_15yr = String((avg_15yr.toFixed(2) * 100).toFixed(0)) + '%';
+          }
+          var avg_20yr = meta["avg_20yr_pct_incr"];
+          if (avg_20yr != "N/A") {
+            avg_20yr = String((avg_20yr.toFixed(2) * 100).toFixed(0)) + '%';
+          }
+          var avg_25yr = meta["avg_25yr_pct_incr"];
+          if (avg_25yr != "N/A") {
+            avg_25yr = String((avg_25yr.toFixed(2) * 100).toFixed(0)) + '%';
+          }
+          var avg_30yr = meta["avg_30yr_pct_incr"];
+          if (avg_30yr != "N/A") {
+            avg_30yr = String((avg_30yr.toFixed(2) * 100).toFixed(0)) + '%';
+          }
+
+          perf_headers.push("Avg 5 yr ±%age:");
+          perf_headers.push("Avg 10 yr ±%age:");
+          perf_headers.push("Avg 15 yr ±%age:");
+          perf_headers.push("Avg 20 yr ±%age:");
+          perf_headers.push("Avg 25 yr ±%age:");
+          perf_headers.push("Avg 30 yr ±%age:");
+
+          perf_vals.push(avg_5yr);
+          perf_vals.push(avg_10yr);
+          perf_vals.push(avg_15yr);
+          perf_vals.push(avg_20yr);
+          perf_vals.push(avg_25yr);
+          perf_vals.push(avg_30yr);
+
+          var perf_vals = svg_perf.selectAll('.perfvals')  
+            .data(perf_vals)           
+            .enter()                           
+            .append('g')                    
+            .attr('class', 'perfvals')             
+            .attr('transform', function(d, i) {                
+              var height = legendRectSize + legendSpacing;     
+              var offset =  height * color.domain().length / 2;   
+              var horz = -2 * legendRectSize;                 
+              var vert = i * height - offset;                   
+              return 'translate(' + 117 + ',' + vert + ')';   
+            });
+
+          perf_vals.append('text')        
+            .attr('x', legendRectSize + legendSpacing) 
+            .attr('y', legendRectSize - legendSpacing) 
+            .text(function(d) { return d; });
+
+          var perf_headers = svg_perf.selectAll('.perfheader')  
+            .data(perf_headers)           
+            .enter()                           
+            .append('g')                    
+            .attr('class', 'perfheader')             
+            .attr('transform', function(d, i) {                
+              var height = legendRectSize + legendSpacing;     
+              var offset =  height * color.domain().length / 2;   
+              var horz = -2 * legendRectSize;                 
+              var vert = i * height - offset;                   
+              return 'translate(' + 0 + ',' + vert + ')';   
+            });
+
+          perf_headers.append('text')        
+            .attr('x', legendRectSize + legendSpacing) 
+            .attr('y', legendRectSize - legendSpacing) 
+            .text(function(d) { return d; });
+
+          data.forEach(function(d) {
+            
+            var coords = [
+              {lat: d["lat1"], lng: d["lng1"]},
+              {lat: d["lat2"], lng: d["lng2"]},
+              {lat: d["lat3"], lng: d["lng3"]},
+              {lat: d["lat4"], lng: d["lng4"]},
+              {lat: d["lat5"], lng: d["lng5"]},
+              {lat: d["lat6"], lng: d["lng6"]}
+            ];
+
+            // bridge cells:
+            if (d['bridge'] && showBridge) {
+              var cell = new google.maps.Polygon({
+                paths: coords,
+                strokeColor: '#000000',
+                strokeOpacity: 0.6,
+                strokeWeight: 2,
+                fillColor: '#444444',
+                fillOpacity: 0.4
+              });
+              
+              cell.setMap(map);
+            }
+
+            // live cells
+            if (d['live']) {
+              if (d['target'] && d['chosen']) {
+                var cell = new google.maps.Polygon({
+                paths: coords,
+                strokeColor: '#000000',
+                strokeOpacity: 0.6,
+                strokeWeight: 2,
+                fillColor: '#7FFF00',
+                fillOpacity: 0.6
+                });
+              } else if (d['chosen']) {
+                var cell = new google.maps.Polygon({
+                paths: coords,
+                strokeColor: '#000000',
+                strokeOpacity: 0.6,
+                strokeWeight: 2,
+                fillColor: '#00BFFF',
+                fillOpacity: 0.6
+                });
+              } else if (d['target']) {
+                var cell = new google.maps.Polygon({
+                paths: coords,
+                strokeColor: '#000000',
+                strokeOpacity: 0.6,
+                strokeWeight: 2,
+                fillColor: '#FFD700',
+                fillOpacity: 0.6
+                });
+              }
+              else {
+                var cell = new google.maps.Polygon({
+                paths: coords,
+                strokeColor: '#000000',
+                strokeOpacity: 0.6,
+                strokeWeight: 2,
+                fillColor: '#444444',
+                fillOpacity: 0.6
+                });
+              }
+
+              cell.ID = d['cell_id'];
+              cell.val = d['avg_vpsf'];
+              cell.rank = d['rank'];
+              cell.area = d['total_area'];
+              cell.count = d['count'];
+              cell.netflow = d['net_flow'];
+              cell.maxflow = d['max_flow'];
+              cell.minflow = d['min_flow'];
+              cell.flushed = d['flushed'];
+
+              cell.setMap(map);
+              cell.addListener('click', showCellData);
+            }
+          });
+        });
+      }
+
+      function showCellData(event) {
+        // cell data
+
+        d3.select("svg").remove();
+
+        var svg_cell = d3.select('#cell')
+          .append('svg')
+          .attr('width', width * 1.4)
+          .attr('height', height)
+          .append('g')
+          .attr('transform', 'translate(' + -19 + ',' + 87 + ')');
+
+        var cell_headers = [];
+        var cell_vals = [];
+
+        cell_headers.push("ID:");
+        cell_headers.push("Value:");
+        cell_headers.push("Rank:");
+        cell_headers.push("Total area:");
+        cell_headers.push("# of parcels:");
+        cell_headers.push("Net flow:");
+        cell_headers.push("Flow max / min:");
+        cell_headers.push("Flushed:");
+
+        var cell_headers = svg_cell.selectAll('.cellheader')  
+          .data(cell_headers)           
+          .enter()                           
+          .append('g')                    
+          .attr('class', 'cellheader')             
+          .attr('transform', function(d, i) {                
+            var height = legendRectSize + legendSpacing;     
+            var offset =  height * 4;   
+            var horz = -2 * legendRectSize;                 
+            var vert = i * height - offset;                   
+            return 'translate(' + 0 + ',' + vert + ')';   
+          });
+
+        cell_headers.append('text')        
+        .attr('x', legendRectSize + legendSpacing) 
+        .attr('y', legendRectSize - legendSpacing) 
+        .text(function(d) { return d; });
+
+        var area = String(this.area)
+        area = area.substr(0, area.length - 3) + ',' + area.substr(area.length - 3);
+
+        cell_vals.push(this.ID);
+        cell_vals.push('$' + String(this.val.toFixed(2)) + " / ft²");
+        cell_vals.push(this.rank + 1);
+        cell_vals.push(area + " ft²");
+        cell_vals.push(this.count);
+        cell_vals.push(this.netflow.toFixed(2));
+        cell_vals.push(String(this.maxflow.toFixed(2)) + ' / ' + String(this.minflow.toFixed(2)));
+        cell_vals.push(this.flushed.toFixed(2));
+
+        var cell_vals = svg_cell.selectAll('.cellvals')  
+          .data(cell_vals)           
+          .enter()                           
+          .append('g')                    
+          .attr('class', 'cellvals')             
+          .attr('transform', function(d, i) {                
+            var height = legendRectSize + legendSpacing;     
+            var offset =  height * 4;   
+            var horz = -2 * legendRectSize;                 
+            var vert = i * height - offset;                   
+            return 'translate(' + 117 + ',' + vert + ')';   
+          });
+
+        cell_vals.append('text')        
+        .attr('x', legendRectSize + legendSpacing) 
+        .attr('y', legendRectSize - legendSpacing) 
+        .text(function(d) { return d; });
+      }
+
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=<ENTER API KEY HERE>&callback=initMap">
+    </script>
+  </body>
+
+</html>

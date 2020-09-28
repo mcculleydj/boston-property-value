@@ -1,0 +1,2 @@
+Credits:
+http://zeroviscosity.com/d3-js-step-by-step/step-3-adding-a-legend
